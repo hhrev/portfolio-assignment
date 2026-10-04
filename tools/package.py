@@ -92,6 +92,9 @@ def restore_charts(parts, orig, figs):
 
     # ---- new charts: Figure 14 (clone of Figure 10 line chart), Figure 15 (clone of Figure 13 bars)
     fig_drawing = sheet_drawing["Report figures"]
+    if figs is None:
+        _content_types(parts)
+        return
     new = [("chart20.xml", "chart12.xml", figs["fig14"], 358,
             "Rolling 5-year active return, net of fees (current less benchmark)",
             {"Annualised 5-year return": "Active return, annualised"}),
@@ -140,7 +143,10 @@ def restore_charts(parts, orig, figs):
     parts[fig_drawing] = dxml.encode("utf-8")
     parts[rels_name(fig_drawing)] = etree.tostring(drels, xml_declaration=True, encoding="UTF-8", standalone=True)
 
-    # ---- content types
+    _content_types(parts)
+
+
+def _content_types(parts):
     ct = etree.fromstring(parts["[Content_Types].xml"])
     for o in list(ct):
         pn = o.get("PartName") or ""
@@ -236,7 +242,7 @@ def refresh_caches(parts, calc):
 def main(built, calc_path, orig_path, figs_path, out):
     parts = read_zip(built)
     orig = read_zip(orig_path)
-    figs = json.load(open(figs_path))
+    figs = None if figs_path == "-" else json.load(open(figs_path))
     calc = openpyxl.load_workbook(calc_path, data_only=True)
     restore_charts(parts, orig, figs)
     n = inject_values(parts, calc)
