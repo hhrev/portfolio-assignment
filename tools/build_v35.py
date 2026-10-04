@@ -409,6 +409,10 @@ def downstream(wb, ref):
     for k in range(11):
         rf[f"O{308 + k}"] = f"=Forecast!M{ref['S0'] + k}"
     rf["O307"] = "Net forecast (5-year, compound)"
+    # Figure 7 compares compound returns with the (compound) return target
+    rf["O177"] = "Expected return (compound)"
+    for k, c in enumerate("BCDEFG"):
+        rf[f"O{178 + k}"] = f"=Portfolio!{c}55-Portfolio!{c}56^2/2"
 
 
 def checks(wb, ref, scope_ref=None):

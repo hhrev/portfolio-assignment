@@ -94,6 +94,26 @@ recommendation is unchanged.
 * The core five cannot reach the 1.1% calibrated TE (its minimum is 1.38%), so it is optimised at
   the brief's 1.5% limit.
 
+## Charts (report-ready theme)
+
+All 21 charts are regenerated from one specification (`tools/charts.py`):
+* **Consistent colours:** Recommended `#2B5C9E`, current fund `#D9641E`, benchmark `#18998A`, return
+  target `#D99E00` (dashed), other series `#6B5CA5` and `#5C9BD6`, reference lines grey (dashed).
+  The palette passes the dataviz validator: lightness band, chroma floor, colour-blind separation
+  and normal-vision floor.
+* **Legends:** below the plot area. They previously overlaid the data on every chart.
+* **Labels:** shown only on the series the chart is about, usually the recommendation. On the
+  frontier chart only the current fund, benchmark and recommendation are labelled, and the other
+  methods are told apart by marker shape.
+* **Fills:** explicit fills on every bar. The stress-test bars previously showed white in Excel.
+* **Sizing and fonts:** Arial throughout, light gridlines, category labels kept at the bottom or
+  left even when values are negative. Charts are 6.3 in wide to fit an A4 page with 1-inch margins.
+* **Report figures:** the charts carry no in-chart title. Use the "Figure N." row above each one as
+  the caption in the report.
+* **Data fixes:** the histogram is labelled by bin lower edge. Figure 7 now plots compound returns
+  against the (compound) target. The frontier axes say "arithmetic". The growth chart axis reads
+  "net of fees".
+
 ## Inputs to verify before submission
 
 `Forecast` section 4 flags these as "verify":

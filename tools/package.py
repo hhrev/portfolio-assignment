@@ -245,6 +245,8 @@ def main(built, calc_path, orig_path, figs_path, out):
     figs = None if figs_path == "-" else json.load(open(figs_path))
     calc = openpyxl.load_workbook(calc_path, data_only=True)
     restore_charts(parts, orig, figs)
+    import charts
+    charts.apply(parts)
     n = inject_values(parts, calc)
     refresh_caches(parts, calc)
     # keep the original document properties (author, application)
