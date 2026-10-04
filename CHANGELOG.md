@@ -2,9 +2,10 @@
 
 `FINM3008_EPPIB_Model_v3.5.xlsx` is built from v3.4 by `tools/make_v35.sh`. The `Forecast` tab now
 builds every asset-class forecast from a method in the literature, using sourced September 2026
-inputs. Every forecast-dependent Solver set has then been re-optimised.
+inputs. The earlier building-block section, its parameter box and the weighted-excess column have
+been removed, so the tab presents a single forecasting framework with no reference to earlier versions. Every forecast-dependent Solver set has then been re-optimised.
 
-## Method by asset class (`Forecast` sections 5 to 7)
+## Method by asset class (`Forecast` sections 4 to 6)
 
 | Asset class | Method | Key sources |
 |---|---|---|
@@ -24,11 +25,12 @@ inputs. Every forecast-dependent Solver set has then been re-optimised.
   means. Confidence still falls as the views disagree.
 * Target tests now use compound returns: brief objective (a), "target reachable", the constraint-cost
   table, the return-advantage checks, the forecast stress test and the franking view.
-* Section 6c estimates betas from the data. Private equity and hedge fund estimates are distorted by
+* Section 5c estimates betas from the data. Private equity and hedge fund estimates are distorted by
   AUD-denominated indices (hedge fund R² is 0.00), so literature values are used and the data
   estimates are shown alongside.
-* New sections: 8 (90% ranges), 9 (comparison with v3.4, 20-year history and published assumptions)
-  and 10 (rationale text for the report). Section 4, the v3.4 method, is kept for comparison.
+* Further sections: 7 (90% ranges), 8 (comparison with the 20-year history and published
+  assumptions) and 9 (rationale text for the report). Section 3 (implied returns) is kept as a
+  cross-check and uses the section 4 inflation and growth assumptions.
 
 ## Net forecasts (compound, p.a.)
 
@@ -72,7 +74,7 @@ Stage 2 weights are unchanged.
 
 ## Inputs to verify before submission
 
-`Forecast` section 5 flags these as "verify":
+`Forecast` section 4 flags these as "verify":
 * the long-run forward P/E averages for ASX 200 (14.8x), MSCI World (15.5x) and EM (12.0x)
 * the EM dividend yield (2.0%)
 * the 2026 fact-sheet figures for VAF and VIF

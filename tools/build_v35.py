@@ -18,6 +18,7 @@ All views are compound (geometric) returns; they are converted to arithmetic (+ 
 Black-Litterman-style blend because the optimiser and the equilibrium prior are arithmetic.
 """
 import sys
+from copy import copy
 
 import openpyxl
 from openpyxl.styles import Alignment
@@ -32,7 +33,7 @@ ASSETS = ["Australian Equities", "World Equities", "Emerging Markets", "Listed P
 PCT1, PCT2 = "0.0%", "0.00%"
 
 # v3.4 net forecasts, kept for the comparison table
-V34_NET = [0.08268, 0.08218, 0.07880, 0.07320, 0.05030, 0.05440, 0.03320, 0.05870, 0.04790,
+_UNUSED = [0.08268, 0.08218, 0.07880, 0.07320, 0.05030, 0.05440, 0.03320, 0.05870, 0.04790,
            0.04770, 0.04600]
 
 
@@ -51,7 +52,7 @@ def quarterly_helpers(wb):
              ("Direct property excess", "S"), ("Private equity excess", "U"),
              ("Hedge funds excess", "T")]
     rows = [[None] * 5] + [[f"={c}{r}-$X{r}" for _, c in names] for r in range(6, 86)]
-    box(q, 3, 32, "Excess returns over cash (adjusted; for Forecast section 6c)", [n for n, _ in names],
+    box(q, 3, 32, "Excess returns over cash (adjusted; for Forecast section 5c)", [n for n, _ in names],
         rows, GREY, fmts=[PCT2] * 5, header_height=28)
     for i in range(5):
         q.column_dimensions[L(32 + i)].width = 11
@@ -59,12 +60,61 @@ def quarterly_helpers(wb):
     return {n: L(32 + i) for i, (n, _) in enumerate(names)}
 
 
+def _blank(c):
+    from openpyxl.styles import Border, Font, PatternFill
+    c.value = None
+    c.border = Border()
+    c.fill = PatternFill(fill_type=None)
+    c.font = Font(name="Arial", size=10)
+    c.number_format = "General"
+    c.alignment = Alignment()
+
+
+def clear_superseded(f, wb):
+    """Remove the earlier building-block section (rows 53-113), its parameter box (K23:L47) and the
+    weighted-excess column it used, so the tab presents one forecasting framework."""
+    for r in range(53, 114):
+        for c in range(1, 10):
+            _blank(f.cell(r, c))
+        f.row_dimensions[r].height = None
+    for r in range(23, 48):
+        for c in (11, 12):
+            _blank(f.cell(r, c))
+    vals = [[f.cell(r, c).value for c in range(1, 8)] for r in range(25, 36)]
+    for r in range(23, 36):
+        _blank(f.cell(r, 8))
+    box(f, 23, 1, "2. Historical returns (adjusted quarterly data)",
+        ["Asset class", "20-year CAGR", "10-year CAGR", "5-year CAGR", "Excess vs cash, 20y",
+         "Excess vs cash, 10y", "Excess vs cash, 5y"], vals, GREY, fmts=[None] + [PCT2] * 6,
+        header_height=28)
+    f["A50"] = "Implied return (average; cross-check on section 5b)"
+    # section 3 cross-check uses the same inflation and growth assumptions as section 4
+    f["B44"], f["C44"], f["D44"] = "=$B$58", "=$B$59", "Section 4"
+    f["B45"], f["C45"], f["D45"] = "=$B$65", "=$B$70", "Section 4"
+    for a in ("B44", "C44", "B45", "C45"):
+        f[a].font = f["B42"].font.copy(color=None)
+    for a in ("D44", "D45"):
+        f[a]._style = copy(f["D41"]._style)
+    inp = wb["Inputs"]
+    inp["B75"] = 0.8
+    inp["C75"] = "Judgement: listed property is the closest liquid proxy"
+    inp["B75"].font = inp["B74"].font.copy()
+    ck = wb["Checks"]
+    ck["A23"] = "Forecast inputs complete (section 4)"
+    ck["B23"] = "=COUNT(Forecast!B55:B104)"
+    ck["C23"] = 50
+    ck["D23"] = '=IF(B23=C23,"PASS","FAIL")'
+    ck["B23"].number_format = ck["C23"].number_format = "0"
+    wb["Oil"]["A22"] = "3. Episode study: oil price shocks, scaled to US$150 (2008 severe case in section 10)"
+
+
 def run(wb):
     f = wb["Forecast"]
     QC = quarterly_helpers(wb)
 
     # ---- 5. Market and economic inputs ----
-    top = 116
+    clear_superseded(f, wb)
+    top = 53
     items = [
         ("cash", "AU cash rate (RBA target)", "=Inputs!$B$26", "RBA, 29-Sep-26 (Inputs B26)", False, PCT2),
         ("y5", "AU 5-year government bond yield", "=Inputs!$B$23", "RBA F2, 22-Sep-26 (Inputs B23)", False, PCT2),
@@ -112,7 +162,7 @@ def run(wb):
         ("w_eu", "World bonds: euro area and other weight", None, "Remainder, priced at Bund rates (conservative)", False, PCT1),
         ("hdg_adj", "World bonds: duration and basis adjustment", -0.0025, "Judgement: 10-year yields overstate a 6.7-year duration index (-0.15%); basis and costs (-0.10%)", True, PCT2),
         ("com_x", "Commodities: excess return over collateral", 0.015, "Levine et al. (2018): 3.3% geometric for a diversified index; Erb & Harvey (2006): c.0% for the average commodity", True, PCT2),
-        ("hf_beta", "Hedge funds: equity beta", 0.35, "Judgement from factor-model literature (Fung & Hsieh 2004); data estimate in section 6c", True, "0.00"),
+        ("hf_beta", "Hedge funds: equity beta", 0.35, "Judgement from factor-model literature (Fung & Hsieh 2004); data estimate in section 5c", True, "0.00"),
         ("hf_alpha", "Hedge funds: net alpha", 0.0, "Dichev & Yu (2011): investors earn 3-7% less than fund returns", True, PCT2),
         ("pe_beta", "Private equity: equity beta", 1.2, "Korteweg (2019) survey: 0.7 to 3.2; Axelson, Sorensen & Stromberg (2014); judgement", True, "0.00"),
         ("pe_prem", "Private equity: net premium over levered public equity", 0.01, "Harris, Jenkinson & Kaplan (2014): >3% p.a. (1984-2008 vintages); judgement 1% for recent vintages", True, PCT2),
@@ -125,7 +175,7 @@ def run(wb):
         if key == "w_eu":
             val = f"=1-{K['w_us']}-{K['w_jp']}-{K['w_uk']}"
         rows.append([label, val, srcs] + [None] * 6)
-    last5 = box(f, top, 1, "5. Market and economic inputs, Sep-2026 (blue = sourced or judgement input)",
+    last5 = box(f, top, 1, "4. Market and economic inputs, Sep-2026 (blue = sourced or judgement input)",
                 ["Input", "Value", "Source"] + [None] * 6, rows, BLUE,
                 fmts=lambda ri, ci: items[ri][5] if ci == 1 else None,
                 inputs={(i, 1) for i, it in enumerate(items) if it[4]}, notes_col=2)
@@ -169,7 +219,7 @@ def run(wb):
     for a, rr in R.items():
         s = spec[a]
         rows.append([a, s[0], s[1], s[2], s[3], f"=SUM(B{rr}:E{rr})", s[5], s[4]])
-    last6 = box(f, top6, 1, "6a. Yield, carry and factor builds (compound, p.a.)",
+    last6 = box(f, top6, 1, "5a. Yield, carry and factor builds (compound, p.a.)",
                 ["Asset class", "Starting yield or income", "Growth or carry", "Adjustments",
                  "Currency or hedge", "View A", "View B", "Method"], rows, TEAL,
                 fmts=[None, PCT2, PCT2, PCT2, PCT2, PCT2, PCT2, None], header_height=40, notes_col=7)
@@ -189,7 +239,7 @@ def run(wb):
         rep = f"=({K[pelr]}/{K[pe]})^({K['rev']}/5)-1" if pe else 0
         rows.append([a, f"={K[dy]}", f"=-{K[dil]}", f"={K[g]}", f"={K['piA']}", rep,
                      f"=SUM(B{rr}:F{rr})", f"={beta}", f"={cash_exp}+H{rr}*{K['dms']}"])
-    box(f, top6b, 1, "6b. Equities and listed property: Grinold-Kroner and risk-premium build-up "
+    box(f, top6b, 1, "5b. Equities and listed property: Grinold-Kroner and risk-premium build-up "
         "(compound, p.a.; foreign returns in AUD via relative PPP)",
         ["Asset class", "Dividend yield", "Net dilution", "Real earnings growth",
          "Inflation (AUD)", "Repricing", "View A: Grinold-Kroner", "Beta to equity premium",
@@ -209,7 +259,7 @@ def run(wb):
         y = f"'Quarterly returns'!${qx[a]}$6:${qx[a]}$85"
         x = f"'Quarterly returns'!${qx['World']}$6:${qx['World']}$85"
         rows.append([a, f"=SLOPE({y},{x})", f"=RSQ({y},{x})", f"=COUNT({y})", used[a], lit[a]])
-    box(f, top6c, 1, "6c. Betas to world equities (quarterly excess returns since 2006)",
+    box(f, top6c, 1, "5c. Betas to world equities (quarterly excess returns since 2006)",
         ["Asset class", "Beta", "R-squared", "Quarters", "Used?", "Literature value"], rows, GREY,
         fmts=[None, "0.00", "0.00", "0", None, "0.00"])
 
@@ -236,7 +286,7 @@ def run(wb):
                      f"=D{rr}+E{rr}+F{rr}^2/2", floors[k],
                      f"=IF(COUNT(B{rr}:C{rr})>1,MAX(STDEV(B{rr}:C{rr}),H{rr}),H{rr})",
                      f"=D{s1}", f"=C{s1}", f"=G{s1}", f"=G{s1}-F{rr}^2/2"])
-    last7 = box(f, top7, 1, "7. Blend: compound views converted to arithmetic, then combined with the "
+    last7 = box(f, top7, 1, "6. Blend: compound views converted to arithmetic, then combined with the "
                 "equilibrium prior (feeds section 1)",
                 ["Asset class", "View A (compound)", "View B (compound)", "Composite (compound)",
                  "Fee add-back (views net of fees)", "Volatility", "Composite (gross, arithmetic)",
@@ -248,11 +298,10 @@ def run(wb):
     for k, a in enumerate(ASSETS):
         f[f"B{6 + k}"] = f"=G{RS[a]}"
         f[f"I{6 + k}"] = f"=I{RS[a]}"
-    f["B5"] = "Theory-based composite (gross, arithmetic)"
+    f["B5"] = "Building-block composite (gross, arithmetic)"
     f["I5"] = "View dispersion"
     f["G18"] = f"=MAX(M{S0}:M{S0 + 10})"
     f["A18"] = "Best single-asset forecast (compound)"
-    f["A53"] = "4. Building blocks (v3.4 method, kept for comparison; no longer feeds section 1)"
     comp = {a: f"Forecast!$M${RS[a]}" for a in ASSETS}
 
     # ---- 8. Uncertainty ----
@@ -263,7 +312,7 @@ def run(wb):
         s = RS[a]
         rows.append([a, f"=M{s}", f"=F{s}", f"=C{rr}/SQRT(5)", f"=I{s}", f"=SQRT(D{rr}^2+E{rr}^2)",
                      f"=B{rr}-1.645*F{rr}", f"=B{rr}+1.645*F{rr}"])
-    last8 = box(f, top8, 1, "8. Forecast uncertainty: 90% range for the 5-year annualised (compound) return",
+    last8 = box(f, top8, 1, "7. Forecast uncertainty: 90% range for the 5-year annualised (compound) return",
                 ["Asset class", "Net forecast (compound)", "Volatility", "Sampling error (vol / sqrt 5)",
                  "View dispersion", "Total standard error", "5th percentile", "95th percentile"],
                 rows, ORANGE, fmts=[None, PCT2, PCT1, PCT2, PCT2, PCT2, PCT1, PCT1], header_height=40)
@@ -284,15 +333,14 @@ def run(wb):
     rows = []
     for k, a in enumerate(ASSETS):
         rr = top9 + 2 + k
-        rows.append([a, V34_NET[k], f"=L{RS[a]}", f"=M{RS[a]}", f"=C{rr}-B{rr}", f"=B{25 + k}", pub[a]]
-                    + [None] * 2)
-    last9 = box(f, top9, 1, "9. Comparison: v3.4 forecasts, 20-year history and published assumptions",
-                ["Asset class", "v3.4 net (old method)", "v3.5 net (arithmetic)", "v3.5 net (compound)",
-                 "Change in optimiser input", "20-year history (gross, compound)", "Published reference"]
-                + [None] * 2, rows, GOLD, fmts=[None, PCT2, PCT2, PCT2, PCT2, PCT2, None],
-                header_height=40, notes_col=6)
+        rows.append([a, f"=L{RS[a]}", f"=M{RS[a]}", f"=B{25 + k}", f"=C{rr}-D{rr}", pub[a]] + [None] * 3)
+    last9 = box(f, top9, 1, "8. Comparison with the 20-year history and published assumptions",
+                ["Asset class", "Net forecast (arithmetic)", "Net forecast (compound)",
+                 "20-year history (gross, compound)", "Forecast less history", "Published reference"]
+                + [None] * 3, rows, GOLD, fmts=[None, PCT2, PCT2, PCT2, PCT2, None],
+                header_height=40, notes_col=5)
     for r in range(top9 + 1, last9 + 1):
-        merge_text(f, r, 7, 9)
+        merge_text(f, r, 6, 9)
 
     # ---- 10. Rationale ----
     top10 = last9 + 3
@@ -321,7 +369,7 @@ def run(wb):
                  "Cash rates are well above the 20-year average after the 2022-26 tightening cycle."),
     }
     rows = [[a, why[a][0]] + [None] * 4 + [why[a][1]] + [None] * 2 for a in ASSETS]
-    last10 = box(f, top10, 1, "10. Forecast rationale (for the report)",
+    last10 = box(f, top10, 1, "9. Forecast rationale (for the report)",
                  ["Asset class", "Method and main drivers"] + [None] * 4 + ["Why it differs from history"]
                  + [None] * 2, rows, OLIVE, notes_col=None)
     for r in range(top10 + 1, last10 + 1):
