@@ -72,6 +72,28 @@ Stage 2 weights are unchanged.
   the return advantage after franking (-0.11%). Equity including listed property now passes
   (68.8%).
 
+## Asset-class scope (`Portfolio` section 9, `Summary` box 12)
+
+Five portfolios, each optimised under the same forecasts, risk model and brief constraints and scored
+on the same measures, including the bootstrap (new columns AC:AF and L:S in `Bootstrap`). The
+recommendation is unchanged.
+
+| | Recommended | Alternatives optimised | No alternatives | Alternatives at benchmark | Core five only |
+|---|---|---|---|---|---|
+| Expected return (compound) | 6.64% | 6.70% | 6.66% | 6.57% | 6.50% |
+| Volatility | 7.90% | 7.80% | 7.66% | 7.98% | 7.35% |
+| Tracking error, bootstrap | 1.39% | 1.14% | 1.13% | 1.56% | 1.14% |
+| Fee | 0.22% | 0.14% | 0.13% | 0.34% | 0.12% |
+| US$150 oil (central) | -7.7% | -8.3% | -9.1% | -8.2% | -8.4% |
+| Transition cost | A$4.4m | A$2.0m | A$1.8m | A$5.2m | A$1.7m |
+| Brief constraints | Met | Met | Met | Not met (TE) | Met |
+
+* When the alternatives are optimised rather than fixed, the optimiser holds no illiquids and 2.4%
+  commodities.
+* Holding alternatives at benchmark weights breaches the bootstrap TE limit and raises fees.
+* The core five cannot reach the 1.1% calibrated TE (its minimum is 1.38%), so it is optimised at
+  the brief's 1.5% limit.
+
 ## Inputs to verify before submission
 
 `Forecast` section 4 flags these as "verify":

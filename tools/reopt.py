@@ -90,6 +90,23 @@ def main(built, calc, out):
         for k, w in enumerate(pts):
             put(V, "BCDEFGHIJK"[k], r0, w)
 
+    # asset-class scope portfolios (Portfolio section 9; weights rows 127-137, columns C:F)
+    def restricted(excl):
+        d2 = dict(d)
+        ub, lb = d["ub"].copy(), d["lb"].copy()
+        for i in excl:
+            ub[i] = lb[i] = 0
+        d2["ub"], d2["lb"] = ub, lb
+        return d2
+    d_bench_alts = dict(d)
+    d_bench_alts["stage2"] = d["bench"][[4, 5, 6, 7]]
+    scope = {"C": solve(d, fix_stage2=False),
+             "D": solve(restricted([4, 5, 6, 7]), fix_stage2=False),
+             "E": solve(d_bench_alts),
+             "F": solve(restricted([2, 3, 4, 5, 6, 7]), fix_stage2=False, te=0.015)}
+    for col, w in scope.items():
+        put(P, col, 127, w)
+
     wb.save(out)
     w = res["robust"]
     print("robust weights:", np.round(w, 4))

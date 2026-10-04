@@ -60,6 +60,9 @@ def solve(d, mu=None, S=None, te=None, eqmax=None, fix_stage2=True, longonly_onl
     if objective == "return":
         f = lambda w: -(mu @ w)
         jac = lambda w: -mu
+    elif objective == "te":   # minimum tracking error
+        f = lambda w: (w - b) @ S @ (w - b)
+        jac = lambda w: 2 * S @ (w - b)
     else:   # minimum variance
         f = lambda w: w @ S @ w
         jac = lambda w: 2 * S @ w

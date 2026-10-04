@@ -411,7 +411,7 @@ def downstream(wb, ref):
     rf["O307"] = "Net forecast (5-year, compound)"
 
 
-def checks(wb, ref):
+def checks(wb, ref, scope_ref=None):
     ws = wb["Checks"]
     last = 44
     while ws.cell(last + 1, 1).value not in (None, ""):
@@ -434,6 +434,10 @@ def checks(wb, ref):
         (["Beta regressions have 30+ quarters", f"=MIN(Forecast!D{rb0}:D{rb0 + 3})", 30,
           '=IF(B{r}>=C{r},"PASS","FAIL")'], "0"),
     ]
+    if scope_ref:
+        t = scope_ref["total_row"]
+        new.append((["Asset-class scope portfolios sum to 100% (Portfolio section 9)",
+                     f"=SUM(Portfolio!B{t}:F{t})", 5, '=IF(ABS(B{r}-C{r})<0.000001,"PASS","FAIL")'], "0.0000"))
     rows, fmts = [], {}
     for i, (vals, nf) in enumerate(existing):
         rows.append(vals)
@@ -469,7 +473,9 @@ def main(src, dst):
     wb = openpyxl.load_workbook(src)
     ref = run(wb)
     downstream(wb, ref)
-    checks(wb, ref)
+    import scope
+    scope_ref = scope.run(wb)
+    checks(wb, ref, scope_ref)
     wb.calculation.fullCalcOnLoad = True
     wb.save(dst)
 
