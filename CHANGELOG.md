@@ -1,3 +1,57 @@
+# EPPIB model: v3.7 (fixes from the v3.6 review)
+
+`FINM3008_EPPIB_Model_v3.7.xlsx` is rebuilt end to end from v3.3 by `tools/make_v37.sh`.
+
+## 1. Oil mitigation built into the recommendation (essential)
+* New optimiser constraint: the US$150 central-case loss must be no worse than the current fund's
+  (`Inputs` B50 = `Oil` F43). It applies to every forecast-dependent optimised set: robust, sample,
+  resampled (each draw), minimum variance, the sensitivity sets, the constraint-cost cases, both
+  frontiers and the scope portfolios. It does not apply to risk parity, naive MVO or the out-of-sample
+  fits, which do not use the forecasts.
+* Shown in `Portfolio` section 3 (row 39), `Summary` compliance row (f), `Checks` row 50 and a new
+  oil column in the `Validation` integrity table.
+* Cost: under 0.1bp of compound return. Commodities rise from 2.4% to 2.7%, funded mainly from
+  emerging markets.
+* A stricter floor at the benchmark's loss is priced in the constraint-cost table ("Oil floor at
+  benchmark loss"). It brings the oil loss to -7.4% but costs about 4bp, moves equity down to 58.6%
+  and adds 1.4% direct property. It also pushes the robust vs resampled gap to 3.4 points, above the
+  3-point stability rule, so it is shown as an alternative and is not the base case.
+* The Stage 2 overweight cap (`Inputs` B47, 2%) now caps the alternatives' upper bounds in the
+  optimiser (`Portfolio` G10:G13). It does not bind in the base case.
+
+## 2. TE setting relabelled
+`Inputs` C45: "Judgement: buffer below the 1.5% brief limit". The value stays at 1.10%; bootstrap TE
+is 1.17%.
+
+## 3. Scorecard return scores follow the forecasts
+`Portfolio` B23:B26: the net arithmetic forecast scaled from 1 (lowest of the 11 classes) to 5
+(highest). Commodities 4, direct property 2, hedge funds 1, private equity 2. The averages (4.2, 2.2,
+2.0, 2.0) now agree with the optimiser, which holds commodities only. The fixed comparison case
+(commodities 3%, direct property 5%, private equity 1%) is renamed "Alternatives at fixed weights"
+because the scorecard no longer implies those weights.
+
+## 4. Disclosures (report, not model)
+Two REVIEW items remain, and both are disclosures: franking (-4bp advantage after franking) and
+equity including listed property (70.4%).
+
+## 5. Text trimmed
+`Oil` section 12 (other mitigation tools) moved to `docs/oil_mitigation_notes.md`. Notes in
+Performance, Portfolio and Validation are shortened.
+
+## Result
+| | Current fund | Benchmark | Recommended |
+|---|---|---|---|
+| Expected return (compound) | 6.61% | 6.38% | 6.70% |
+| Volatility | 8.38% | 7.01% | 7.84% |
+| Tracking error (parametric / bootstrap) | 2.16% / 1.56% | 0 | 1.10% / 1.17% |
+| 5-year loss probability (bootstrap) | 7.7% | 6.2% | 7.2% |
+| GFC / US$150 oil (central) | -24.2% / -8.3% | -19.3% / -7.4% | -23.5% / -8.3% |
+
+Weights: Australian equities 27.5%, world equities 27.9%, emerging markets 6.5%, listed property
+8.5%, commodities 2.7%, Australian fixed income 12.0%, world fixed income 12.9%, cash 2.0%.
+Checks: ALL CHECKS PASS, 0 error cells, 21 charts. Robust vs resampled gap 2.8 points. All four
+transition phases MET.
+
 # EPPIB model: v3.6 (decisions from the v3.5 review)
 
 `FINM3008_EPPIB_Model_v3.6.xlsx` is rebuilt end to end from v3.3 by `tools/make_v36.sh`.

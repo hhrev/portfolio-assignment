@@ -3,6 +3,8 @@
 Robust MVO (the recommendation): maximise net expected return subject to
   parametric TE vs benchmark <= TE limit (shrunk covariance), weights sum to 1,
   asset bounds (Inputs E:F), Stage 2 weights fixed, equity within band, illiquids <= max, cash >= min.
+From v3.7 the Stage 2 upper bounds are capped at benchmark + the overweight cap (Inputs B47) and the
+US$150 oil central-case loss must be no worse than the floor in Inputs B50 (Oil!F28:F38 responses).
 """
 import warnings
 
@@ -29,11 +31,19 @@ def load(path):
         "te": inp["B45"].value, "eqmin": inp["B31"].value, "eqmax": inp["B32"].value,
         "illmax": inp["B33"].value, "cashmin": inp["B34"].value,
     }
+    if isinstance(inp["B50"].value, (int, float)) and "floor" in str(inp["A50"].value).lower():
+        d["oil"] = g(wb["Oil"], "F28:F38")[:, 0]
+        d["oilmin"] = inp["B50"].value
+        cap = inp["B47"].value
+        for i in STAGE2:
+            d["ub"][i] = min(d["ub"][i], d["bench"][i] + cap)
     return d, wb
 
 
 def solve(d, mu=None, S=None, te=None, eqmax=None, fix_stage2=True, longonly_only=False, x0=None,
-          objective="return", target=None):
+          objective="return", target=None, oil=None):
+    """oil: None = the floor in d (if any), False = no oil floor, a number = that floor.
+    Returns None if no start converges (e.g. the problem is infeasible)."""
     mu = d["mu"] if mu is None else mu
     S = d["S_shr"] if S is None else S
     te = d["te"] if te is None else (None if te is False else te)
@@ -48,6 +58,9 @@ def solve(d, mu=None, S=None, te=None, eqmax=None, fix_stage2=True, longonly_onl
     cons += [{"type": "ineq", "fun": lambda w: w[10] - d["cashmin"]}]
     if te is not None:
         cons.append({"type": "ineq", "fun": lambda w: te ** 2 - (w - b) @ S @ (w - b)})
+    floor = d.get("oilmin") if oil is None else (None if oil is False else oil)
+    if floor is not None and not longonly_only:
+        cons.append({"type": "ineq", "fun": lambda w: d["oil"] @ w - floor})
     if target is not None:
         cons.append({"type": "ineq", "fun": lambda w: mu @ w - target})
     if longonly_only:
@@ -75,7 +88,7 @@ def solve(d, mu=None, S=None, te=None, eqmax=None, fix_stage2=True, longonly_onl
                      options={"maxiter": 2000, "ftol": 1e-12})
         if r.success and (best is None or r.fun < best.fun):
             best = r
-    return best.x
+    return None if best is None else best.x
 
 
 def frontier(d, S=None, te=None, n=10, fix=True):

@@ -253,8 +253,8 @@ def specs():
                            cat_title="Cumulative 5-year return (lower edge of each 10-point bin)",
                            gap=30, overlap=-5, cat_kind="num", cat_fmt="0%"), (W, H))
     # Figure 7: return target out of reach
-    S["chart9.xml"] = (bar([(f"={RF}$O$177", f"{RF}$O$178:$O$183", NAVY, True)], f"{RF}$N$178:$N$183",
-                           lines=[(f"={RF}$P$177", f"{RF}$P$178:$P$183", GOLD, "dash", False)],
+    S["chart9.xml"] = (bar([(f"={RF}$O$177", f"{RF}$O$178:$O$185", NAVY, True)], f"{RF}$N$178:$N$185",
+                           lines=[(f"={RF}$P$177", f"{RF}$P$178:$P$185", GOLD, "dash", False)],
                            val_fmt="0%", lbl_fmt="0.00%", val_title="Expected return (compound, net, p.a.)", val_min=0), (W, H))
     # Figure 8: oil estimates
     S["chart10.xml"] = (bar(port3(RF, "O", "P", "Q", (204, 207), 203), f"{RF}$N$204:$N$207",

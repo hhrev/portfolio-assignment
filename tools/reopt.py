@@ -49,7 +49,8 @@ SCORECARD = [0.03, 0.05, 0.0, 0.01]     # Stage 2 scorecard weights (comparison 
 
 def main(built, calc, out, mode="v35"):
     d, _ = load(calc)
-    v36 = mode == "v36"
+    v37 = mode == "v37"
+    v36 = mode in ("v36", "v37")
     FIX = not v36                       # v3.6: alternatives optimised everywhere
     wb = openpyxl.load_workbook(built)
     M, V, P = wb["Methods"], wb["Validation"], wb["Portfolio"]
@@ -91,6 +92,9 @@ def main(built, calc, out, mode="v35"):
     put(P, "E", 43, solve(d, eqmax=0.72, fix_stage2=FIX))
     put(P, "F", 43, solve(d_sc) if v36 else solve(d, fix_stage2=False))
     put(P, "G", 43, solve(d, te=False, fix_stage2=False, longonly_only=True))
+    if v37:                                                            # cost of the oil floor
+        put(P, "H", 43, solve(d, fix_stage2=False, oil=False))
+        put(P, "I", 43, solve(d, fix_stage2=False, oil=float(d["bench"] @ d["oil"])))
 
     for r0, te in ((113, False), (131, d["te"])):
         pts = frontier(d, te=te, fix=FIX)
@@ -107,18 +111,26 @@ def main(built, calc, out, mode="v35"):
         return d2
     d_bench_alts = dict(d)
     d_bench_alts["stage2"] = d["bench"][[4, 5, 6, 7]]
-    scope = {"C": solve(d_sc) if v36 else solve(d, fix_stage2=False),
-             "D": solve(restricted([4, 5, 6, 7]), fix_stage2=False),
-             "E": solve(d_bench_alts),
-             "F": solve(restricted([2, 3, 4, 5, 6, 7]), fix_stage2=False, te=0.015)}
-    for col, w in scope.items():
+    scope = {"C": lambda **k: solve(d_sc, **k) if v36 else solve(d, fix_stage2=False, **k),
+             "D": lambda **k: solve(restricted([4, 5, 6, 7]), fix_stage2=False, **k),
+             "E": lambda **k: solve(d_bench_alts, **k),
+             "F": lambda **k: solve(restricted([2, 3, 4, 5, 6, 7]), fix_stage2=False, te=0.015, **k)}
+    for j, (col, f) in enumerate(scope.items()):
+        w = f()
+        if w is None and v37:          # oil floor not attainable with this asset set
+            w = f(oil=False)
+            P[f"B{143 + j}"] = P[f"B{143 + j}"].value + "; oil floor not attainable, solved without it"
+            print("scope", col, "solved without the oil floor")
         put(P, col, 127, w)
 
     wb.save(out)
     w = res["robust"]
     print("robust weights:", np.round(w, 4), "| max gap to resampled %.4f" % np.max(np.abs(w - mean / mean.sum())))
-    print("expected return (arith) %.4f  TE %.4f" % (d["mu"] @ w,
-                                                    np.sqrt((w - d["bench"]) @ d["S_shr"] @ (w - d["bench"]))))
+    v = np.sqrt(w @ d["S_shr"] @ w)
+    print("expected return (arith) %.4f comp %.5f vol %.4f TE %.4f" % (
+        d["mu"] @ w, d["mu"] @ w - v * v / 2, v, np.sqrt((w - d["bench"]) @ d["S_shr"] @ (w - d["bench"]))))
+    if "oil" in d:
+        print("oil central %.4f floor %.4f" % (d["oil"] @ w, d["oilmin"]))
 
 
 if __name__ == "__main__":
