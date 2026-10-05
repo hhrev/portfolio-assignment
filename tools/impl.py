@@ -267,7 +267,7 @@ def checks(wb, C, perf, oilref, tc, plan, frank, eqd, integ):
         (["Oil robustness regressions have 30+ observations",
           f"=MIN(Oil!H{oilref['rob_first']}:H{oilref['rob_first'] + 11})", 30, '=IF(B{r}>=C{r},"PASS","FAIL")'], "0"),
         (["Asset-class oil regressions have 30+ observations",
-          f"=MIN(Oil!G{oilref['asset_first']}:G{oilref['asset_first'] + 10})", 30, '=IF(B{r}>=C{r},"PASS","FAIL")'], "0"),
+          f"=MIN(Oil!E{oilref['asset_first']}:E{oilref['asset_first'] + 10})", 30, '=IF(B{r}>=C{r},"PASS","FAIL")'], "0"),
         (["2008 oil episode prices found", f"=COUNT(Oil!D{oilref['e0']}:E{oilref['e0']})", 2,
           '=IF(B{r}=C{r},"PASS","FAIL")'], "0"),
         (["Pasted Solver outputs still meet constraints", f'=COUNTIF({integ["range"]},"REVIEW")', 0,

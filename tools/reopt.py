@@ -27,7 +27,7 @@ def shrink(S, delta):
     return (1 - delta) * S + delta * F
 
 
-def resample(d, n_sets=150, T=80, seed=20261016, delta=0.35):
+def resample(d, n_sets=150, T=80, seed=20261016, delta=0.35, fix=True):
     """Michaud resampling: simulate T quarters from the forecast distribution, re-estimate means and
     covariance (with the same constant-correlation shrinkage), re-optimise, average the weights."""
     rng = np.random.default_rng(seed)
@@ -37,15 +37,20 @@ def resample(d, n_sets=150, T=80, seed=20261016, delta=0.35):
         R = rng.multivariate_normal(mu_q, S_q, size=T)
         mu_hat = R.mean(0) * 4
         S_hat = shrink(np.cov(R, rowvar=False) * 4, delta)
-        w = solve(d, mu=mu_hat, S=S_hat)
+        w = solve(d, mu=mu_hat, S=S_hat, fix_stage2=fix)
         if w is not None:
             W.append(w)
     W = np.array(W)
     return W.mean(0), W.std(0, ddof=1), np.percentile(W, 10, axis=0), np.percentile(W, 90, axis=0), len(W)
 
 
-def main(built, calc, out):
+SCORECARD = [0.03, 0.05, 0.0, 0.01]     # Stage 2 scorecard weights (comparison case)
+
+
+def main(built, calc, out, mode="v35"):
     d, _ = load(calc)
+    v36 = mode == "v36"
+    FIX = not v36                       # v3.6: alternatives optimised everywhere
     wb = openpyxl.load_workbook(built)
     M, V, P = wb["Methods"], wb["Validation"], wb["Portfolio"]
 
@@ -58,35 +63,37 @@ def main(built, calc, out):
             ws[f"{col}{r0 + i}"] = round(float(x), 4)
 
     res = {}
-    res["robust"] = solve(d)
-    res["sample"] = solve(d, S=d["S_smp"])
-    res["minvar"] = solve(d, objective="minvar")
-    mean, sd, p10, p90, n = resample(d)
+    res["robust"] = solve(d, fix_stage2=FIX)
+    res["sample"] = solve(d, S=d["S_smp"], fix_stage2=FIX)
+    res["minvar"] = solve(d, objective="minvar", fix_stage2=FIX)
+    mean, sd, p10, p90, n = resample(d, fix=FIX)
     res["resampled"] = mean
     put(M, "D", 6, res["robust"])
     put(M, "E", 6, res["sample"])
     put(M, "F", 6, mean / mean.sum())
     put(M, "G", 6, res["minvar"])
     for i in range(11):
-        if i in (4, 5, 6, 7):        # Stage 2 fixed: no spread
+        if FIX and i in (4, 5, 6, 7):        # Stage 2 fixed: no spread
             continue
         M[f"F{41 + i}"] = round(float(sd[i]), 4)
         M[f"G{41 + i}"] = round(float(p10[i]), 4)
         M[f"H{41 + i}"] = round(float(p90[i]), 4)
     M["A39"] = f"4. Resampling spread ({n} resampled input sets)"
 
-    put(V, "C", 30, solve(d, S=d["S_smp"]))           # unshrunk covariance
-    put(V, "D", 30, solve(d, te=0.0075))              # tight TE
-    put(V, "E", 30, solve(d, te=0.015))               # loose TE
+    d_sc = dict(d)
+    d_sc["stage2"] = np.array(SCORECARD)
+    put(V, "C", 30, solve(d, S=d["S_smp"], fix_stage2=FIX))           # unshrunk covariance
+    put(V, "D", 30, solve(d, te=0.0075, fix_stage2=FIX))              # tight TE
+    put(V, "E", 30, solve(d, te=0.015, fix_stage2=FIX))               # loose TE
 
-    put(P, "C", 43, solve(d, te=0.015))
-    put(P, "D", 43, solve(d, te=False))
-    put(P, "E", 43, solve(d, eqmax=0.72))
-    put(P, "F", 43, solve(d, fix_stage2=False))
+    put(P, "C", 43, solve(d, te=0.015, fix_stage2=FIX))
+    put(P, "D", 43, solve(d, te=False, fix_stage2=FIX))
+    put(P, "E", 43, solve(d, eqmax=0.72, fix_stage2=FIX))
+    put(P, "F", 43, solve(d_sc) if v36 else solve(d, fix_stage2=False))
     put(P, "G", 43, solve(d, te=False, fix_stage2=False, longonly_only=True))
 
     for r0, te in ((113, False), (131, d["te"])):
-        pts = frontier(d, te=te)
+        pts = frontier(d, te=te, fix=FIX)
         for k, w in enumerate(pts):
             put(V, "BCDEFGHIJK"[k], r0, w)
 
@@ -100,7 +107,7 @@ def main(built, calc, out):
         return d2
     d_bench_alts = dict(d)
     d_bench_alts["stage2"] = d["bench"][[4, 5, 6, 7]]
-    scope = {"C": solve(d, fix_stage2=False),
+    scope = {"C": solve(d_sc) if v36 else solve(d, fix_stage2=False),
              "D": solve(restricted([4, 5, 6, 7]), fix_stage2=False),
              "E": solve(d_bench_alts),
              "F": solve(restricted([2, 3, 4, 5, 6, 7]), fix_stage2=False, te=0.015)}
@@ -109,10 +116,10 @@ def main(built, calc, out):
 
     wb.save(out)
     w = res["robust"]
-    print("robust weights:", np.round(w, 4))
+    print("robust weights:", np.round(w, 4), "| max gap to resampled %.4f" % np.max(np.abs(w - mean / mean.sum())))
     print("expected return (arith) %.4f  TE %.4f" % (d["mu"] @ w,
                                                     np.sqrt((w - d["bench"]) @ d["S_shr"] @ (w - d["bench"]))))
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:5])

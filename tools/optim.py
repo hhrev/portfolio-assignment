@@ -78,10 +78,10 @@ def solve(d, mu=None, S=None, te=None, eqmax=None, fix_stage2=True, longonly_onl
     return best.x
 
 
-def frontier(d, S=None, te=None, n=10):
+def frontier(d, S=None, te=None, n=10, fix=True):
     S = d["S_shr"] if S is None else S
-    w_lo = solve(d, S=S, te=te, objective="minvar")
-    w_hi = solve(d, S=S, te=te)
+    w_lo = solve(d, S=S, te=te, objective="minvar", fix_stage2=fix)
+    w_hi = solve(d, S=S, te=te, fix_stage2=fix)
     r_lo, r_hi = d["mu"] @ w_lo, d["mu"] @ w_hi
     pts = []
     for k in range(n):
@@ -91,5 +91,5 @@ def frontier(d, S=None, te=None, n=10):
         elif k == n - 1:
             pts.append(w_hi)
         else:
-            pts.append(solve(d, S=S, te=te, objective="minvar", target=t - 1e-9))
+            pts.append(solve(d, S=S, te=te, objective="minvar", target=t - 1e-9, fix_stage2=fix))
     return pts

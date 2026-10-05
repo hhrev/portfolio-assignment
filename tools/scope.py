@@ -15,10 +15,10 @@ ASSETS = ["Australian Equities", "World Equities", "Emerging Markets", "Listed P
           "Commodities", "Direct Property", "Hedge Funds", "Private Equity",
           "Australian Fixed Income", "World Fixed Income", "Cash"]
 PCT1, PCT2 = "0.0%", "0.00%"
-NAMES = ["Recommended", "Alternatives optimised", "No alternatives", "Alternatives at benchmark weights",
+NAMES = ["Recommended", "Alternatives fixed by scorecard", "No alternatives", "Alternatives at benchmark weights",
          "Core five only"]
-DESC = ["Stage 2 alternatives fixed by judgement (Commodities 3%, Direct Property 5%, Private Equity 1%)",
-        "Commodities, Direct Property, Hedge Funds and Private Equity chosen by the optimiser (0 to upper bound)",
+DESC = ["Commodities, Direct Property, Hedge Funds and Private Equity chosen by the optimiser (0 to upper bound)",
+        "Alternatives fixed at the Stage 2 scorecard weights (Commodities 3%, Direct Property 5%, Private Equity 1%)",
         "Commodities, Direct Property, Hedge Funds and Private Equity excluded",
         "Alternatives held at benchmark weights (Commodities 2%, Direct Property 5%, Hedge Funds 3%, Private Equity 3%)",
         "Australian and world equities, both bond classes and cash only; cannot reach 1.1% TE, so optimised at the 1.5% brief limit"]
@@ -196,7 +196,7 @@ def summary(wb, ref):
         rows.append([lab] + [f"=Portfolio!{c}{rr[key]}" for c in "BCDEF"])
         fm.append(nf)
     last = box(s, 85, 1, "12. Asset-class scope: portfolios with and without some asset classes "
-               "(Portfolio section 9)", ["Measure", "Recommended", "Alternatives optimised", "No alternatives",
+               "(Portfolio section 9)", ["Measure", "Recommended", "Alternatives fixed by scorecard", "No alternatives",
                                          "Alternatives at benchmark", "Core five only"], rows, TEAL,
                fmts=lambda ri, ci: fm[ri] if ci else None, header_height=40)
     status_cf(s, f"B{last}:F{last}")

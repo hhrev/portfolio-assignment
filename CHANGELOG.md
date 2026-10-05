@@ -1,3 +1,60 @@
+# EPPIB model: v3.6 (decisions from the v3.5 review)
+
+`FINM3008_EPPIB_Model_v3.6.xlsx` is rebuilt end to end from v3.3 by `tools/make_v36.sh`.
+
+## Decisions
+1. **Alternatives are optimised, not fixed.** The optimiser holds no direct property, hedge funds or
+   private equity, and 2.4% commodities. The Stage 2 scorecard stays visible as a cross-check
+   (`Portfolio` section 2). The scorecard-fixed case is now a comparison portfolio in section 9 and
+   the constraint-cost table.
+2. **Australian fixed income floor of 12%** (`Inputs` E13). A 10% floor left the robust vs
+   resampled gap at 4.1 points; at 12% it is 2.7 points, inside the 3-point rule. The return cost is
+   under 1bp. Risk parity and Naive MVO are unchanged (they do not use the forecasts).
+3. **Trimmed.**
+   * Oil asset-class panel cut to the 12-month horizon; section 2 is untouched. Oil formulas fell
+     from 44,700 to 22,300, and the workbook total from 73,900 to 51,600.
+   * Forecast rationale text removed and saved to `docs/forecast_rationale_notes.md`, to rewrite in
+     your own words.
+
+## Other fixes from the review
+* The transition plan and the oil mitigation options are now tested against the 1.5% brief TE limit.
+  All four phases and all options pass.
+* "Verify" source labels are relabelled as judgement inputs. They still need checking (see below).
+* New `Forecast` section 9: a sensitivity table for the P/E reversion share. Its 50% row reproduces
+  section 1.
+* Arithmetic and compound returns are labelled in Methods, Portfolio, Risk, Validation and Report
+  figures.
+
+## Result
+| | Current fund | Recommended |
+|---|---|---|
+| Expected return (compound) | 6.61% | 6.70% |
+| Volatility | 8.38% | 7.84% |
+| Tracking error (parametric / bootstrap) | 2.16% / 1.56% | 1.10% / 1.18% |
+| 5-year loss probability (bootstrap) | 7.7% | 7.3% |
+| Fee | 0.11% | 0.13% |
+| GFC / US$150 oil (central) | -24.2% / -8.3% | -23.5% / -8.4% |
+
+Weights: Australian equities 27.4%, world equities 27.9%, emerging markets 6.7%, listed property
+8.7%, commodities 2.4%, Australian fixed income 12.0%, world fixed income 12.9%, cash 2.0%.
+
+* Turnover is 22%. Transition cost is A$1.6m, and the advantage after costs is +0.07% a year.
+* REVIEW flags left to disclose:
+  * franking: the advantage is -0.04% after franking credits
+  * equity including listed property: 70.7% against a 69% ceiling under the wider definition
+* Oil: the recommended portfolio loses slightly more than the current fund (-8.4% vs -8.3%). A 2%
+  commodity tilt from world equities cuts the loss to -7.5% for 1bp of return (`Oil` section 11).
+
+## Still to do before submission
+* Replace the long-run P/E sources:
+  * ASX 200 (14.8x) currently cites an IG article. Use J.P. Morgan *Guide to the Markets Australia*.
+  * MSCI World (15.5x) and EM (12.0x) are judgement.
+* Check the EM dividend yield (2.0%) against the MSCI factsheet.
+* Re-run Solver in Excel for the main portfolios to confirm the pasted weights.
+* Open the file in Excel at least once.
+
+---
+
 # EPPIB model: v3.4 to v3.5 (theory-based forecasts)
 
 `FINM3008_EPPIB_Model_v3.5.xlsx` is built from v3.4 by `tools/make_v35.sh`. The `Forecast` tab now

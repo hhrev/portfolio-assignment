@@ -15,9 +15,7 @@ X0 = 33                  # column AG: start of the panel extension
 def ext_cols():
     names = ["Month end", "AU 5-year yield (%)", "1m yield change (pp)", "12m yield change (pp)",
              "60m yield change (pp)"]
-    names += [f"ln {a}" for a in ASSETS]
-    for h in (1, 12, 60):
-        names += [f"{h}m {a} (log)" for a in ASSETS]
+    names += [f"12m {a} (log)" for a in ASSETS]
     return {n: L(X0 + i) for i, n in enumerate(names)}, names
 
 
@@ -43,12 +41,8 @@ def run(wb):
                        if r - h >= R0 else "")
         for k, a in enumerate(ASSETS):
             dc = L(2 + k)
-            row.append(f"=IFERROR(LN(INDEX(Data!${dc}$2:${dc}$497,MATCH(N{r},Data!$A$2:$A$497,1))),\"\")")
-        for h in (1, 12, 60):
-            for a in ASSETS:
-                lv = X[f"ln {a}"]
-                row.append(f"=IF(AND(ISNUMBER({lv}{r}),ISNUMBER({lv}{r - h})),{lv}{r}-{lv}{r - h},\"\")"
-                           if r - h >= R0 else "")
+            lvl = lambda rr_: f"INDEX(Data!${dc}$2:${dc}$497,MATCH(N{rr_},Data!$A$2:$A$497,1))"
+            row.append(f"=IFERROR(LN({lvl(r)}/{lvl(r - 12)}),\"\")" if r - 12 >= R0 else "")
         rows.append(row)
 
     def xfmt(ri, ci):
@@ -56,11 +50,9 @@ def run(wb):
             return "mmm-yy"
         if ci <= 4:
             return "0.00"
-        if ci <= 15:
-            return "0.0000"
         return "0.000"
-    box(ws, 3, X0, "Panel extension: AU 5-year yield (RBA 5Y yield tab) and asset-class log levels "
-        "and changes (Data tab)", names, rows, GREY, fmts=xfmt, header_height=54)
+    box(ws, 3, X0, "Panel extension: AU 5-year yield (RBA 5Y yield tab) and 12-month asset-class log "
+        "returns (Data tab)", names, rows, GREY, fmts=xfmt, header_height=54)
     for i in range(len(names)):
         ws.column_dimensions[L(X0 + i)].width = 10 if i == 0 else 11
     ws.column_dimensions["AF"].width = 3
@@ -99,25 +91,20 @@ def run(wb):
                 rows, BROWN, fmts=f7, header_height=40)
     rob = {"first": top + 2}
 
-    # ---- 8. Asset-class sensitivity (regression approach) ----
+    # ---- 8. Asset-class sensitivity (regression approach, 12-month horizon) ----
     top8 = last7 + 3
     rows = []
     for k, a in enumerate(ASSETS):
         r = top8 + 2 + k
-        cy = {h: X[f"{h}m {a} (log)"] for h in (1, 12, 60)}
-        rows.append([a] + [f"=SLOPE({rr(cy[h])},{rr(oilc[h])})" for h in (1, 12, 60)] +
-                    [f"=CORREL({rr(cy[12])},{rr(oilc[12])})*SQRT((G{r}-2)/(1-F{r}))/SQRT(12)",
-                     f"=RSQ({rr(cy[12])},{rr(oilc[12])})", f"=COUNT({rr(cy[12])})"] +
-                    [f"=EXP({c}{r}*$B$7)-1" for c in "BCD"])
+        cy = X[f"12m {a} (log)"]
+        rows.append([a, f"=SLOPE({rr(cy)},{rr(oilc[12])})",
+                     f"=CORREL({rr(cy)},{rr(oilc[12])})*SQRT((E{r}-2)/(1-D{r}))/SQRT(12)",
+                     f"=RSQ({rr(cy)},{rr(oilc[12])})", f"=COUNT({rr(cy)})", f"=EXP(B{r}*$B$7)-1"])
     f8 = top8 + 2
-
-    def f8f(ri, ci):
-        return {1: "0.000", 2: "0.000", 3: "0.000", 4: "0.00", 5: "0.000", 6: "0"}.get(ci, PCT1 if ci else None)
-    last8 = box(ws, top8, 1, "8. Asset-class sensitivity to oil (log return on log oil change, all "
-                "available months)", ["Asset class", "Beta: 1 month", "Beta: 12 months",
-                                      "Beta: 60 months", "t-stat (adj.): 12m", "R-squared: 12m",
-                                      "Obs: 12m", "Response: 1 month", "Response: 12 months",
-                                      "Response: 60 months"], rows, PURPLE, fmts=f8f, header_height=40)
+    last8 = box(ws, top8, 1, "8. Asset-class sensitivity to oil (12-month log return on 12-month log oil "
+                "change, all available months)", ["Asset class", "Beta: 12 months", "t-stat (adj.)",
+                                                  "R-squared", "Obs", "Response to scenario"],
+                rows, PURPLE, fmts=[None, "0.000", "0.00", "0.000", "0", PCT1], header_height=40)
 
     # ---- 10. 2008 episode (built before section 9 so 9 can reference it) ----
     top9 = last8 + 3
@@ -155,21 +142,20 @@ def run(wb):
         ws[f"F{28 + k}"] = f"=IF({flag}=1,E{a10 + k},D{a10 + k})"
     ws["F27"] = "Central case"
     ws["G38"] = "Not scaled"
-    ws["A22"] = "3. Episode study: oil price shocks, scaled to US$150 (2008 added in section 10)"
+    ws["A22"] = "3. Episode study: oil price shocks, scaled to US$150 (2008 severe case in section 10)"
 
     # ---- 9. Portfolio impact by horizon ----
     prow = {"Current fund": "Portfolio!$C$6:$C$16", "Benchmark": "Portfolio!$D$6:$D$16",
             "Recommended": "Portfolio!$E$6:$E$16"}
     rows = []
     for name, w in prow.items():
-        rows.append([name] + [f"=SUMPRODUCT({c}${f8}:{c}${f8 + 10},{w})" for c in "HIJ"] +
+        rows.append([name] + [f"=SUMPRODUCT($F${f8}:$F${f8 + 10},{w})"] +
                     [f"=SUMPRODUCT(D$28:D$38,{w})", f"=SUMPRODUCT(E$28:E$38,{w})",
                      f"=SUMPRODUCT(C${a10}:C${a10 + 10},{w})", f"=SUMPRODUCT(F$28:F$38,{w})"])
-    last9 = box(ws, top9, 1, "9. US$150 oil: portfolio impact by horizon, regression approach vs "
-                "episode approach", ["Portfolio", "Regression: 1 month", "Regression: 12 months",
-                                     "Regression: 60 months", "Episode: 1990 scaled",
-                                     "Episode: 2022 scaled", "Episode: 2008 scaled", "Central case"],
-                rows, BROWN, fmts=[None] + [PCT1] * 7, header_height=40)
+    last9 = box(ws, top9, 1, "9. US$150 oil: portfolio impact, regression approach vs episode approach",
+                ["Portfolio", "Regression: 12 months", "Episode: 1990 scaled", "Episode: 2022 scaled",
+                 "Episode: 2008 scaled", "Central case"],
+                rows, BROWN, fmts=[None] + [PCT1] * 5, header_height=40)
     imp = {"cur": top9 + 2, "bench": top9 + 3, "rec": top9 + 4}
     assert last9 < top10
 
@@ -196,14 +182,14 @@ def run(wb):
                      f"=SQRT(SUMPRODUCT(MMULT({w},Risk!$B$41:$L$51),{w}))",
                      f"=SQRT(SUMPRODUCT(MMULT({a},Risk!$B$41:$L$51),{a}))",
                      f"=SUMPRODUCT(MMULT({w},$F$28:$F$38))",
-                     f"=SUMPRODUCT(MMULT({w},$I${f8}:$I${f8 + 10}))",
+                     f"=SUMPRODUCT(MMULT({w},$F${f8}:$F${f8 + 10}))",
                      f"=B{r}-B${top11 + 2}", f"=E{r}-E${top11 + 2}",
-                     f'=IF(AND(D{r}<=Inputs!$B$45+0.00001,MIN({w})>=0,SUMPRODUCT(MMULT({w},Inputs!$G$5:$G$15))<=Inputs!$B$32,SUMPRODUCT(MMULT({w},Inputs!$G$5:$G$15))>=Inputs!$B$31),"MET","NOT MET")'])
+                     f'=IF(AND(D{r}<=Inputs!$B$27+0.00001,MIN({w})>=0,SUMPRODUCT(MMULT({w},Inputs!$G$5:$G$15))<=Inputs!$B$32,SUMPRODUCT(MMULT({w},Inputs!$G$5:$G$15))>=Inputs!$B$31),"MET","NOT MET")'])
     last11 = box(ws, top11, 1, "11. Mitigation options compared (parametric, same risk model as the "
                  "recommendation)", ["Option", "Expected return", "Volatility", "Tracking error",
                                      "Oil: episode central case", "Oil: 12-month regression",
                                      "Return cost vs recommended", "Oil loss reduced by",
-                                     "TE (1.1% calibrated limit) and equity band"], rows, OLIVE,
+                                     "TE (1.5% brief limit) and equity band"], rows, OLIVE,
                  fmts=[None, PCT2, PCT2, PCT2, PCT1, PCT1, PCT2, PCT1, None], header_height=40)
     status_cf(ws, f"I{top11 + 2}:I{last11}")
     rows = []

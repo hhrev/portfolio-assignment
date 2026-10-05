@@ -45,10 +45,9 @@ def summary(wb, C, perf, oilref, tc, plan, frank, eqd, chk):
     rows = [
         ["Australian equities: 12m oil beta since 1986", f"=Oil!E{rb + 4}"],
         ["AU 5-year yield: 12m oil beta since 1986 (pp)", f"=Oil!E{rb + 10}"],
-        ["Recommended: regression impact, 12 months", f"=Oil!C{imp}"],
-        ["Recommended: regression impact, 60 months", f"=Oil!D{imp}"],
-        ["Recommended: episode central case", f"=Oil!H{imp}"],
-        ["Recommended: severe case (2008 scaled)", f"=Oil!G{imp}"],
+        ["Recommended: regression impact, 12 months", f"=Oil!B{imp}"],
+        ["Recommended: episode central case", f"=Oil!F{imp}"],
+        ["Recommended: severe case (2008 scaled)", f"=Oil!E{imp}"],
         ["Mitigation: commodities +2% from Aus equities, loss reduced", f"=Oil!H{of + 3}"],
         ["Mitigation: same option, tracking error", f"=Oil!D{of + 3}"],
     ]
